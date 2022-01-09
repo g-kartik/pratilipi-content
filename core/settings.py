@@ -19,8 +19,12 @@ import environ
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 env = environ.Env()
-env.read_env(BASE_DIR / 'content.env')
-env.read_env(BASE_DIR / 'postgres.env')
+env.read_env(BASE_DIR.parent / '.env')
+RUNTIME_ENV = env('RUNTIME_ENV', default='dev_env')
+ROOT_ENV_PATH = Path(BASE_DIR.parent / 'env' / RUNTIME_ENV)
+env.read_env(ROOT_ENV_PATH / 'content' / 'content.env')
+env.read_env(ROOT_ENV_PATH / 'content' / 'postgres.env')
+env.read_env(ROOT_ENV_PATH / 'services.env')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.0/howto/deployment/checklist/
@@ -29,10 +33,9 @@ env.read_env(BASE_DIR / 'postgres.env')
 SECRET_KEY = env('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env("DEBUG")
 
-ALLOWED_HOSTS = []
-
+ALLOWED_HOSTS = env('ALLOWED_HOSTS', default=['localhost', '127.0.0.1'])
 
 # Application definition
 
@@ -140,8 +143,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 RQ_QUEUES = {
     'default': {
-        'HOST': 'localhost',
-        'PORT': 6379,
+        'HOST': env('REDIS_HOST'),
+        'PORT': env('REDIS_PORT'),
         'DB': 0,
         'DEFAULT_TIMEOUT': 360,
     }

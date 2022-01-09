@@ -3,12 +3,16 @@ from .models import Book
 import requests
 import json
 
+from environ import Env
+
+env = Env()
+
 
 class BookListSerializer(serializers.ListSerializer):
 
     def validate(self, data):
         user_ids = {obj['user_id'] for obj in data}
-        user_response = requests.post("http://127.0.0.1:8000/users/verify", data={'user_ids': user_ids})
+        user_response = requests.post(f"{env('USER_URL')}/users/verify", data={'user_ids': user_ids})
         invalid_user_ids = json.loads(user_response.content)['invalid_user_ids']
         if invalid_user_ids:
             raise serializers.ValidationError({"invalid_user_ids": invalid_user_ids})
