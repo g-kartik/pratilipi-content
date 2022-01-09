@@ -50,6 +50,8 @@ INSTALLED_APPS = [
     # Third party apps
     'rest_framework',
     'django_rq',
+    'drf_spectacular',
+    'drf_spectacular_sidecar',
     
     # Django apps
     'content'
@@ -148,4 +150,26 @@ RQ_QUEUES = {
         'DB': 0,
         'DEFAULT_TIMEOUT': 360,
     }
+}
+
+REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Content API',
+    'DESCRIPTION': 'Pratilipi Demo - Content API',
+    'VERSION': '1.0.0',
+    'CONTACT': {
+      'name': 'G Karthik Raja',
+      'email': 'gkartikraja@gmail.com'
+    },
+    'SWAGGER_UI_DIST': 'SIDECAR',
+    'SWAGGER_UI_FAVICON_HREF': 'SIDECAR',
+    'REDOC_DIST': 'SIDECAR',
+    "SWAGGER_UI_SETTINGS": {
+        "deepLinking": True,
+        "persistAuthorization": True,
+        "displayOperationId": True,
+    },
 }

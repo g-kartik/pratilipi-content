@@ -6,6 +6,8 @@ from django.db.models import Case, When
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
+from drf_spectacular.utils import extend_schema
+from django.utils.decorators import method_decorator
 
 from . import rq_tasks
 from .exceptions import ServiceUnavailable
@@ -17,6 +19,13 @@ from itertools import chain
 env = Env()
 
 
+@method_decorator(name='destroy', decorator=extend_schema(operation_id="Method deletes a book"))
+@method_decorator(name='partial_update', decorator=extend_schema(operation_id="Method partially updates the "
+                                                                                    "details of a book"))
+@method_decorator(name='update', decorator=extend_schema(operation_id="Method updates the details of a book"))
+@method_decorator(name='retrieve', decorator=extend_schema(operation_id="Method retrieves the details of a book"))
+@method_decorator(name='list', decorator=extend_schema(operation_id="Method returns a list of books"))
+@method_decorator(name='create', decorator=extend_schema(operation_id="Method creates a book"))
 class BookAPIViewSet(ModelViewSet):
 
     def get_queryset(self):
