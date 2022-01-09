@@ -8,11 +8,13 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 from drf_spectacular.utils import extend_schema
 from django.utils.decorators import method_decorator
+from rest_framework.decorators import action
 
 from . import rq_tasks
 from .exceptions import ServiceUnavailable
 from .models import Book
-from .serializers import BookSerializer, ContentCSVSerializer
+from .serializers import (BookSerializer, ContentCSVSerializer, ContentCSVStatusSerializer,
+                          ContentCSVResponseSerializer, ContentCSVStatusResponseSerializer)
 from environ import Env
 from itertools import chain
 
@@ -25,7 +27,8 @@ env = Env()
 @method_decorator(name='update', decorator=extend_schema(operation_id="Method updates the details of a book"))
 @method_decorator(name='retrieve', decorator=extend_schema(operation_id="Method retrieves the details of a book"))
 @method_decorator(name='list', decorator=extend_schema(operation_id="Method returns a list of books"))
-@method_decorator(name='create', decorator=extend_schema(operation_id="Method creates a book"))
+@method_decorator(name='create', decorator=extend_schema(operation_id="Method creates a book",
+                                                         responses={'200': ContentCSVResponseSerializer}))
 class BookAPIViewSet(ModelViewSet):
 
     def get_queryset(self):
@@ -50,10 +53,39 @@ class BookAPIViewSet(ModelViewSet):
             return BookSerializer
 
     def perform_create(self, serializer):
-        django_rq.enqueue(rq_tasks.create_content, serializer.validated_data)
+        job = django_rq.enqueue(rq_tasks.create_content, serializer.validated_data)
+        return job.id
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        return Response(status=status.HTTP_202_ACCEPTED, data={'detail': {"Task has been queued"}})
+        job_id = self.perform_create(serializer)
+        return Response(status=status.HTTP_202_ACCEPTED, data={'detail': {"Task has been queued"}, 'job_id': job_id})
+
+    @extend_schema(operation_id="Method returns the status of the content upload job", description="Given the job id "
+                   "of the content upload task, it returns the status of the job along with some message",
+                   request=ContentCSVStatusSerializer, responses={'200': ContentCSVStatusResponseSerializer})
+    @action(methods=['POST'], detail=False)
+    def status(self, request):
+        serializer = ContentCSVStatusSerializer(data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            response = self._get_rq_response(queue="default", job_id=serializer.validated_data['job_id'])
+            serializer = ContentCSVStatusResponseSerializer(data=response)
+            if serializer.is_valid(raise_exception=True):
+                return Response(serializer.data)
+
+    @staticmethod
+    def _get_rq_response(queue, job_id):
+        queue = django_rq.get_queue(queue)
+        job = queue.fetch_job(job_id)
+        if job is None or job.is_finished:
+            response = {"state": "Finished"}
+        elif job.is_queued:
+            response = {"state": "Queued"}
+        elif job.is_failed:
+            response = {"state": "Failed", "message": job.exc_info}
+        else:
+            response = {"state": "Started"}
+            if 'status' in job.meta:
+                response['message'] = job.meta['status']
+        return response

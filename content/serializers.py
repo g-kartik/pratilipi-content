@@ -44,3 +44,18 @@ class ContentCSVSerializer(serializers.Serializer):
         if not file.name.split('.')[-1] == 'csv':
             raise serializers.ValidationError('please upload a valid .csv file')
         return file
+
+
+class ContentCSVResponseSerializer(serializers.Serializer):
+    detail = serializers.CharField(max_length=100)
+    job_id = serializers.CharField(max_length=36)
+
+
+class ContentCSVStatusSerializer(serializers.Serializer):
+    job_id = serializers.CharField(max_length=36)
+
+
+class ContentCSVStatusResponseSerializer(serializers.Serializer):
+    state = serializers.ChoiceField(choices=[
+        "Queued", "Started", "Finished", "Failed"])
+    message = serializers.CharField(allow_blank=True, default="")
