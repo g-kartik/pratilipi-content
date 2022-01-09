@@ -59,3 +59,4 @@ class ContentCSVStatusResponseSerializer(serializers.Serializer):
     state = serializers.ChoiceField(choices=[
         "Queued", "Started", "Finished", "Failed"])
     message = serializers.CharField(allow_blank=True, default="")
+    data = BookSerializer(many=True, default=[])

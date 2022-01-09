@@ -70,16 +70,20 @@ class BookAPIViewSet(ModelViewSet):
         serializer = ContentCSVStatusSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
             response = self._get_rq_response(queue="default", job_id=serializer.validated_data['job_id'])
-            serializer = ContentCSVStatusResponseSerializer(data=response)
-            if serializer.is_valid(raise_exception=True):
-                return Response(serializer.data)
+            serializer = ContentCSVStatusResponseSerializer(response)
+            return Response(serializer.data)
+
 
     @staticmethod
     def _get_rq_response(queue, job_id):
         queue = django_rq.get_queue(queue)
         job = queue.fetch_job(job_id)
         if job is None or job.is_finished:
-            response = {"state": "Finished"}
+            result, is_valid = job.result
+            if is_valid:
+                response = {"state": "Finished", "data": job.result if job else []}
+            else:
+                response = {"state": "Finished", "message": result}
         elif job.is_queued:
             response = {"state": "Queued"}
         elif job.is_failed:
