@@ -78,10 +78,12 @@ class BookAPIViewSet(ModelViewSet):
     def _get_rq_response(queue, job_id):
         queue = django_rq.get_queue(queue)
         job = queue.fetch_job(job_id)
-        if job is None or job.is_finished:
+        if job is None:
+            response = {"state": "Finished", "message": ""}
+        elif job.is_finished:
             result, is_valid = job.result
             if is_valid:
-                response = {"state": "Finished", "data": job.result if job else []}
+                response = {"state": "Finished", "data": result if result else []}
             else:
                 response = {"state": "Finished", "message": result}
         elif job.is_queued:
